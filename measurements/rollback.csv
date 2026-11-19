@@ -1,0 +1,3 @@
+run,push_utc,canary_up_s,first_fail_s,aborted_s,canary_gone_s,detect_to_rollback_s,bad_exposure_s,push_to_restored_s,failed_measurements
+1,2026-11-19T07:31:03Z,95,154,184,184,30,89,184,0.8624014514098756;0.8516483516483516
+2,2026-11-19T07:35:25Z,106,166,196,196,30,90,196,0.797979797979798;0.7906976744186047
