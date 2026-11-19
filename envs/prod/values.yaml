@@ -1,0 +1,4 @@
+# prod: changed only by the promote workflow (staging -> prod), behind the 'production' environment approval.
+image:
+  tag: "bacbfb856c750947bb119ba44c0480a8686c20ca"
+replicas: 2

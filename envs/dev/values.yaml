@@ -1,0 +1,4 @@
+# dev: CI commits a new image.tag here automatically on every green build of main.
+image:
+  tag: "df3e5e65cebc1cc9c6fe270e8397072fd4fbc18e"
+replicas: 1

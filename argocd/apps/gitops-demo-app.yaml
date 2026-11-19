@@ -1,0 +1,45 @@
+# One Argo CD Application per directory under envs/ (dev, staging, prod).
+# Each env = shared chart + that env's values + that env's SealedSecrets.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: gitops-demo-app
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://github.com/KulmeetSJ/gitops-demo-platform.git
+        revision: main
+        directories:
+          - path: envs/*
+  template:
+    metadata:
+      name: 'gitops-demo-app-{{.path.basename}}'
+      labels:
+        env: '{{.path.basename}}'
+    spec:
+      project: default
+      sources:
+        - repoURL: https://github.com/KulmeetSJ/gitops-demo-platform.git
+          targetRevision: main
+          path: charts/gitops-demo-app
+          helm:
+            releaseName: gitops-demo-app
+            valueFiles: ['$values/envs/{{.path.basename}}/values.yaml']
+        - repoURL: https://github.com/KulmeetSJ/gitops-demo-platform.git
+          targetRevision: main
+          ref: values
+        - repoURL: https://github.com/KulmeetSJ/gitops-demo-platform.git
+          targetRevision: main
+          path: 'envs/{{.path.basename}}/secrets'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{.path.basename}}'
+      syncPolicy:
+        automated: { prune: true, selfHeal: true }
+        syncOptions: ["CreateNamespace=true"]
+        retry: { limit: 10, backoff: { duration: 15s, factor: 2, maxDuration: 3m } }

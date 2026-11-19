@@ -1,0 +1,22 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
+      - name: Lint chart and render every environment
+        run: make lint
+      - name: Image tags must be immutable git SHAs
+        run: |
+          for env in dev staging prod; do
+            tag=$(yq '.image.tag' envs/$env/values.yaml)
+            [[ "$tag" =~ ^[0-9a-f]{40}$ ]] || { echo "::error file=envs/$env/values.yaml::image.tag '$tag' is not a 40-char git SHA"; exit 1; }
+            echo "$env: $tag"
+          done

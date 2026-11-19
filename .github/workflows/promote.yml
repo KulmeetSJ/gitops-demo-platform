@@ -1,0 +1,47 @@
+name: promote
+
+# dev -> staging: anyone with write access can run it.
+# staging -> prod: the job targets the 'production' environment, so it waits for a required reviewer.
+# Either way the change lands as a commit in Git, and Argo CD pulls it. CI never touches the cluster.
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Environment to promote into
+        type: choice
+        options: [staging, prod]
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: promote-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    if: inputs.target == 'staging'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v7
+      - name: Promote dev -> staging
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          ./scripts/promote.sh dev staging
+
+  prod:
+    if: inputs.target == 'prod'
+    runs-on: ubuntu-latest
+    environment: production      # required reviewers = the manual approval gate
+    steps:
+      - uses: actions/checkout@v7
+      - name: Promote staging -> prod
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          ./scripts/promote.sh staging prod

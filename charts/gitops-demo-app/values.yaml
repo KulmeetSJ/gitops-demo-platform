@@ -1,0 +1,29 @@
+# Defaults. Per-environment overrides live in envs/<env>/values.yaml.
+image:
+  repository: ghcr.io/kulmeetsj/gitops-demo-app
+  tag: ""          # required: immutable git SHA, set by CI / promotion
+  pullPolicy: IfNotPresent
+
+replicas: 1
+
+# Fraction of /api requests that fail with HTTP 500 (rollback demos only).
+faultRate: "0"
+
+resources:
+  requests: { cpu: 100m, memory: 384Mi }
+  limits: { cpu: "1", memory: 512Mi }
+
+# Name of the Secret (from a SealedSecret) holding keys `username` and `password`.
+dbSecretName: gitops-demo-app-db
+
+postgres:
+  enabled: true
+  image: postgres:17.6-alpine
+  storage: 1Gi
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 500m, memory: 256Mi }
+
+serviceMonitor:
+  enabled: true
+  interval: 15s
