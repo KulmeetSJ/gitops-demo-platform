@@ -49,7 +49,16 @@ CI never holds cluster credentials. Its only write access is a deploy key that l
 ## Results at a glance
 Personal-project benchmarks; methods and raw data in [RESULTS.md](RESULTS.md) and [`measurements/`](measurements/).
 
-<!-- RESULTS-SUMMARY -->
+| What | Median | Runs |
+|---|---|---|
+| Commit → healthy in **prod** (dev → staging → prod, canary at each), excluding human approval wait | **17m12s** (range 16m00s–18m40s) | 3 |
+| Commit → healthy in **dev** (CI + GitOps commit + Argo CD sync + full canary) | **7m51s** | 3 |
+| Bad release: first failed analysis → canary removed, stable serving 100% | **30 s** (every run) | 5 |
+| Bad release: time the bad version served traffic | **90 s** | 5 |
+| Bad release: push → automatically restored, no human action | **3m04s** (range 2m21s–3m42s) | 5 |
+| Non-compliant manifests blocked at admission | **7/7** (0/1 compliant blocked) | n/a |
+
+<!-- DEMO-GIF: add docs/demo.gif here (bad release → canary aborted) -->
 
 ## Quick start
 Requires Docker (~8 GB of memory for Docker Desktop), `kind`, `kubectl`, `helm`, `kubeseal`.
