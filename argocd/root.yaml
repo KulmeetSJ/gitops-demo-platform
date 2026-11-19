@@ -13,5 +13,12 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
+  # Argo CD adds pre-delete finalizers at runtime to apps whose charts have pre-delete hooks (e.g. Kyverno).
+  # They are controller-owned state, not drift.
+  ignoreDifferences:
+    - group: argoproj.io
+      kind: Application
+      jsonPointers: [/metadata/finalizers]
   syncPolicy:
     automated: { prune: true, selfHeal: true }
+    syncOptions: ["RespectIgnoreDifferences=true"]

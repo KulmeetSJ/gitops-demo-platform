@@ -7,7 +7,7 @@ ENV="${1:?usage: seal-db-secret.sh <dev|staging|prod>}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/envs/$ENV/secrets/db-sealedsecret.yaml"
 
-PASSWORD="$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)"
+PASSWORD="$(openssl rand -hex 24)"
 kubectl create secret generic gitops-demo-app-db --namespace "$ENV" \
     --from-literal=username=accounts --from-literal=password="$PASSWORD" \
     --dry-run=client -o yaml \
