@@ -2,4 +2,3 @@
 image:
   tag: "a88078efc5bc045d26f1de97b4ba9cdc0f1f4bc6"
 replicas: 1
-faultRate: "0.2"
