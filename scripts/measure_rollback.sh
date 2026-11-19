@@ -58,7 +58,7 @@ canary_gone()    { local r; r=$(ready_pods "$CANARY"); [[ -z "$r" || "$r" == 0 ]
 push_main() {
   for attempt in 1 2 3 4 5; do
     git push -q origin HEAD:main && return 0
-    log "push rejected (attempt $attempt), rebasing"; sleep $((attempt * 2)); git pull -q --rebase origin main
+    log "push rejected (attempt $attempt), rebasing"; sleep $((attempt * 2)); git pull -q --rebase --autostash origin main
   done
   return 1
 }
@@ -66,7 +66,7 @@ push_main() {
 median() { sort -n | awk '{a[NR]=$1} END {if (NR%2) print a[(NR+1)/2]; else print (a[NR/2]+a[NR/2+1])/2}'; }
 
 [[ -z "$(git status --porcelain -- "$VALUES")" ]] || { log "$VALUES has local changes; aborting"; exit 1; }
-git pull -q --rebase origin main
+git pull -q --rebase --autostash origin main
 [[ "$(yq '.faultRate' "$VALUES")" == "0" ]] || { log "dev faultRate is not 0; fix that first"; exit 1; }
 mkdir -p "$(dirname "$CSV")"
 [[ -f "$CSV" ]] || echo "run,push_utc,canary_up_s,first_fail_s,aborted_s,canary_gone_s,detect_to_rollback_s,bad_exposure_s,push_to_restored_s,failed_measurements" >"$CSV"
