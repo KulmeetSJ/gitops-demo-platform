@@ -1,0 +1,19 @@
+# Autogen: the Deployment itself is rejected at apply time, before any ReplicaSet/Pod exists.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bad-deployment-latest
+  namespace: dev
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: bad } }
+  template:
+    metadata: { labels: { app: bad } }
+    spec:
+      securityContext: { runAsNonRoot: true, runAsUser: 65532 }
+      containers:
+        - name: app
+          image: nginx:latest
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }

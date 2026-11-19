@@ -1,0 +1,42 @@
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: require-requests-limits
+  annotations:
+    policies.kyverno.io/title: Require CPU and memory requests and limits
+    policies.kyverno.io/category: Pod Security / Supply Chain
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: >-
+      Every container must declare CPU and memory requests and limits, so the scheduler can place it and one workload cannot starve its neighbours.
+spec:
+  validationActions: [Deny]          # Enforce: reject at admission
+  evaluation:
+    background: { enabled: true }    # also report on resources that already exist
+  matchConstraints:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values: [dev, staging, prod]
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  # Also check Deployments/StatefulSets etc. directly, so a bad manifest fails at apply time, not later at pod creation.
+  autogen:
+    podControllers:
+      controllers: [deployments, statefulsets, daemonsets, jobs, cronjobs, replicasets]
+  variables:
+    - name: containers
+      expression: >-
+        object.spec.containers
+        + object.spec.?initContainers.orValue([])
+        + object.spec.?ephemeralContainers.orValue([])
+  validations:
+    - expression: >-
+        variables.containers.all(c,
+          has(c.resources) && has(c.resources.requests) && has(c.resources.limits)
+          && 'cpu' in c.resources.requests && 'memory' in c.resources.requests
+          && 'cpu' in c.resources.limits && 'memory' in c.resources.limits)
+      message: "Every container must set resources.requests and resources.limits for both cpu and memory."

@@ -1,5 +1,5 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: {{ include "app.name" . }}
   labels:
@@ -12,8 +12,22 @@ spec:
     matchLabels:
       {{- include "app.selectorLabels" . | nindent 6 }}
   strategy:
-    type: RollingUpdate
-    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+    # Replica-weighted canary (no traffic router, see ADR 0002). With N replicas a step of W% runs
+    # ceil(W*N/100) canary pods next to the stable ones, so real weights are approximate at small N.
+    canary:
+      maxSurge: 1
+      maxUnavailable: 0
+      analysis:
+        # Runs in the background from the first canary step until promotion; a failure aborts the rollout
+        # and scales the stable ReplicaSet back to 100% automatically.
+        templates:
+          - templateName: {{ include "app.name" . }}-canary-health
+        startingStep: 1
+        args:
+          - name: canary-hash
+            valueFrom: { podTemplateHashValue: Latest }
+      steps:
+        {{- toYaml .Values.canary.steps | nindent 8 }}
   template:
     metadata:
       labels:

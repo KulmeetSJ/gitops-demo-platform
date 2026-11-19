@@ -20,3 +20,32 @@ jobs:
             [[ "$tag" =~ ^[0-9a-f]{40}$ ]] || { echo "::error file=envs/$env/values.yaml::image.tag '$tag' is not a 40-char git SHA"; exit 1; }
             echo "$env: $tag"
           done
+
+  policy-tests:
+    name: Kyverno policy tests
+    runs-on: ubuntu-latest
+    env:
+      KYVERNO_VERSION: v1.20.0
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Kyverno CLI (checksum-verified)
+        run: |
+          cd "$RUNNER_TEMP"
+          base="https://github.com/kyverno/kyverno/releases/download/${KYVERNO_VERSION}"
+          tarball="kyverno-cli_${KYVERNO_VERSION}_linux_x86_64.tar.gz"
+          curl -fsSLO "$base/$tarball" && curl -fsSLO "$base/checksums.txt"
+          grep " ${tarball}\$" checksums.txt | sha256sum -c -
+          tar -xzf "$tarball" kyverno && sudo mv kyverno /usr/local/bin/
+          kyverno version
+      - name: Policies reject every bad manifest and admit the good one
+        run: kyverno test policy-tests/
+      - name: The app chart itself complies in every environment
+        # (Rollout pods aren't autogen targets; they are checked live at Pod admission.)
+        run: |
+          for env in dev staging prod; do
+            helm template gitops-demo-app charts/gitops-demo-app -f envs/$env/values.yaml --namespace $env \
+              | NS=$env yq 'select(.metadata != null) | .metadata.namespace = env(NS)' > "/tmp/rendered-$env.yaml"
+            kyverno apply policies/kyverno/ --resource "/tmp/rendered-$env.yaml" \
+              --values-file policy-tests/values.yaml --policy-report=false 2>&1 | tee "/tmp/out-$env.txt"
+            grep -q "fail: 0, warn: 0, error: 0" "/tmp/out-$env.txt" || { echo "::error::chart violates policy in $env"; exit 1; }
+          done

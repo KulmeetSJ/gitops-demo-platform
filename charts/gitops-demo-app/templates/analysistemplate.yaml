@@ -1,0 +1,37 @@
+# Canary health = the canary pods' own metrics, selected by the pod-template hash that Argo Rollouts
+# stamps on them (copied onto every series by the ServiceMonitor's podTargetLabels).
+# NaN (no traffic) matches neither condition -> Inconclusive -> rollout pauses for a human; it never passes silently.
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: {{ include "app.name" . }}-canary-health
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+spec:
+  args:
+    - name: canary-hash
+  metrics:
+    - name: success-rate
+      initialDelay: {{ .Values.canary.analysis.initialDelay }}
+      interval: {{ .Values.canary.analysis.interval }}
+      failureLimit: {{ .Values.canary.analysis.failureLimit }}
+      successCondition: result[0] >= {{ .Values.canary.analysis.minSuccessRate }}
+      failureCondition: result[0] < {{ .Values.canary.analysis.minSuccessRate }}
+      provider:
+        prometheus:
+          address: {{ .Values.canary.analysis.prometheusAddress }}
+          query: |
+            sum(rate(http_server_requests_seconds_count{namespace="{{ .Release.Namespace }}", rollouts_pod_template_hash="{{ "{{args.canary-hash}}" }}", uri!~"/actuator.*", status!~"5.."}[1m]))
+            /
+            sum(rate(http_server_requests_seconds_count{namespace="{{ .Release.Namespace }}", rollouts_pod_template_hash="{{ "{{args.canary-hash}}" }}", uri!~"/actuator.*"}[1m]))
+    - name: p95-latency-seconds
+      initialDelay: {{ .Values.canary.analysis.initialDelay }}
+      interval: {{ .Values.canary.analysis.interval }}
+      failureLimit: {{ .Values.canary.analysis.failureLimit }}
+      successCondition: result[0] <= {{ .Values.canary.analysis.maxP95Seconds }}
+      failureCondition: result[0] > {{ .Values.canary.analysis.maxP95Seconds }}
+      provider:
+        prometheus:
+          address: {{ .Values.canary.analysis.prometheusAddress }}
+          query: |
+            histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{namespace="{{ .Release.Namespace }}", rollouts_pod_template_hash="{{ "{{args.canary-hash}}" }}", uri!~"/actuator.*"}[1m])))

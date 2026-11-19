@@ -1,0 +1,32 @@
+# Run with: kyverno test policy-tests/
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: platform-policies
+policies:
+  - ../policies/kyverno/disallow-latest-tag.yaml
+  - ../policies/kyverno/require-requests-limits.yaml
+  - ../policies/kyverno/disallow-privileged-hostpath.yaml
+  - ../policies/kyverno/require-run-as-non-root.yaml
+resources:
+  - resources/good-pod.yaml
+  - resources/bad-latest-tag.yaml
+  - resources/bad-untagged-image.yaml
+  - resources/bad-no-limits.yaml
+  - resources/bad-privileged.yaml
+  - resources/bad-hostpath.yaml
+  - resources/bad-run-as-root.yaml
+  - resources/bad-deployment-latest.yaml
+variables: values.yaml
+results:
+  # The compliant pod passes everything.
+  - { policy: disallow-latest-tag,          kind: Pod, resources: [good-pod], result: pass }
+  - { policy: require-requests-limits,      kind: Pod, resources: [good-pod], result: pass }
+  - { policy: disallow-privileged-hostpath, kind: Pod, resources: [good-pod], result: pass }
+  - { policy: require-run-as-non-root,      kind: Pod, resources: [good-pod], result: pass }
+  # Each bad manifest fails exactly the policy it violates.
+  - { policy: disallow-latest-tag,          kind: Pod, resources: [bad-latest-tag, bad-untagged-image], result: fail }
+  - { policy: require-requests-limits,      kind: Pod, resources: [bad-no-limits], result: fail }
+  - { policy: disallow-privileged-hostpath, kind: Pod, resources: [bad-privileged, bad-hostpath], result: fail }
+  - { policy: require-run-as-non-root,      kind: Pod, resources: [bad-run-as-root], result: fail }
+  - { policy: disallow-latest-tag,          kind: Deployment, resources: [bad-deployment-latest], result: fail }

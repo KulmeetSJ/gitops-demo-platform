@@ -24,6 +24,28 @@ postgres:
     requests: { cpu: 50m, memory: 64Mi }
     limits: { cpu: 500m, memory: 256Mi }
 
+canary:
+  # Plan: 10% -> 25% -> 50% -> 100%, pausing at each step while background analysis runs.
+  steps:
+    - setWeight: 10
+    - pause: { duration: 60s }
+    - setWeight: 25
+    - pause: { duration: 60s }
+    - setWeight: 50
+    - pause: { duration: 60s }
+  analysis:
+    prometheusAddress: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+    initialDelay: 60s       # let the canary take traffic and get two scrapes in
+    interval: 30s
+    failureLimit: 1         # abort on the 2nd failed measurement
+    minSuccessRate: 0.99
+    maxP95Seconds: 0.5
+
+loadGenerator:
+  enabled: true
+  image: curlimages/curl:8.23.0
+  sleepSeconds: "0.1"       # roughly 8 req/s
+
 serviceMonitor:
   enabled: true
   interval: 15s

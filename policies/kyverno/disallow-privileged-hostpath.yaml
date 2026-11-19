@@ -1,0 +1,42 @@
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: disallow-privileged-hostpath
+  annotations:
+    policies.kyverno.io/title: Disallow privileged containers and hostPath volumes
+    policies.kyverno.io/category: Pod Security / Supply Chain
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: >-
+      Privileged containers and hostPath mounts give a pod root-level access to the node, which breaks namespace isolation.
+spec:
+  validationActions: [Deny]          # Enforce: reject at admission
+  evaluation:
+    background: { enabled: true }    # also report on resources that already exist
+  matchConstraints:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values: [dev, staging, prod]
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  # Also check Deployments/StatefulSets etc. directly, so a bad manifest fails at apply time, not later at pod creation.
+  autogen:
+    podControllers:
+      controllers: [deployments, statefulsets, daemonsets, jobs, cronjobs, replicasets]
+  variables:
+    - name: containers
+      expression: >-
+        object.spec.containers
+        + object.spec.?initContainers.orValue([])
+        + object.spec.?ephemeralContainers.orValue([])
+  validations:
+    - expression: >-
+        variables.containers.all(c,
+          !(has(c.securityContext) && has(c.securityContext.privileged) && c.securityContext.privileged))
+      message: "Privileged containers are not allowed (securityContext.privileged must be false or unset)."
+    - expression: "object.spec.?volumes.orValue([]).all(v, !has(v.hostPath))"
+      message: "hostPath volumes are not allowed."

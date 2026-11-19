@@ -6,6 +6,8 @@ metadata:
   labels:
     {{- include "app.labels" . | nindent 4 }}
 spec:
+  # Copy the canary/stable pod-template hash onto every series so analysis can query canary pods only.
+  podTargetLabels: [rollouts-pod-template-hash]
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "app.name" . }}

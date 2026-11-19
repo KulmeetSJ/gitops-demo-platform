@@ -1,0 +1,10 @@
+# The CLI has no cluster, so tell it the labels of the namespaces the resources live in.
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Values
+namespaceSelector:
+  - name: dev
+    labels: { kubernetes.io/metadata.name: dev }
+  - name: staging
+    labels: { kubernetes.io/metadata.name: staging }
+  - name: prod
+    labels: { kubernetes.io/metadata.name: prod }

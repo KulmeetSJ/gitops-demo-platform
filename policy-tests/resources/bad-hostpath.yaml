@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bad-hostpath
+  namespace: dev
+spec:
+  securityContext: { runAsNonRoot: true, runAsUser: 65532 }
+  containers:
+    - name: app
+      image: ghcr.io/kulmeetsj/gitops-demo-app:27be0f527edb0391af16608bbd4186ba465a81d1
+      volumeMounts: [{ name: host, mountPath: /host }]
+      resources:
+        requests: { cpu: 100m, memory: 128Mi }
+        limits: { cpu: 500m, memory: 256Mi }
+  volumes:
+    - name: host
+      hostPath: { path: / }

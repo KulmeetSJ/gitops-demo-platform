@@ -1,0 +1,44 @@
+{{- if .Values.loadGenerator.enabled }}
+# Synthetic traffic so canary analysis has data to judge (no real users on a laptop cluster).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "app.name" . }}-loadgen
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: loadgen
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "app.name" . }}
+      app.kubernetes.io/component: loadgen
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "app.name" . }}
+        app.kubernetes.io/component: loadgen
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        runAsGroup: 101
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: loadgen
+          image: {{ .Values.loadGenerator.image }}
+          command: ["/bin/sh", "-c"]
+          # A new connection per request, so kube-proxy spreads load across stable and canary pods.
+          args:
+            - |
+              while true; do
+                curl -s -o /dev/null --max-time 2 http://{{ include "app.name" . }}/api/accounts
+                sleep {{ .Values.loadGenerator.sleepSeconds }}
+              done
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 32Mi }
+          securityContext:
+            {{- include "app.containerSecurityContext" . | nindent 12 }}
+{{- end }}
