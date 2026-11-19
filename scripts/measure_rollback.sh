@@ -67,7 +67,7 @@ median() { sort -n | awk '{a[NR]=$1} END {if (NR%2) print a[(NR+1)/2]; else prin
 
 [[ -z "$(git status --porcelain -- "$VALUES")" ]] || { log "$VALUES has local changes; aborting"; exit 1; }
 git pull -q --rebase --autostash origin main
-[[ "$(yq '.faultRate' "$VALUES")" == "0" ]] || { log "dev faultRate is not 0; fix that first"; exit 1; }
+[[ "$(yq '.faultRate // "0"' "$VALUES")" == "0" ]] || { log "dev faultRate is not 0; fix that first"; exit 1; }
 mkdir -p "$(dirname "$CSV")"
 [[ -f "$CSV" ]] || echo "run,push_utc,canary_up_s,first_fail_s,aborted_s,canary_gone_s,detect_to_rollback_s,bad_exposure_s,push_to_restored_s,failed_measurements" >"$CSV"
 TMP=$(mktemp); trap 'rm -f "$TMP"' EXIT

@@ -16,7 +16,7 @@ B=$'\e[1m'; D=$'\e[2m'; R=$'\e[31m'; G=$'\e[32m'; Y=$'\e[33m'; C=$'\e[36m'; N=$'
 ro() { kubectl -n "$NS" get rollout gitops-demo-app -o jsonpath="$1"; }
 push_main() { for a in 1 2 3; do git push -q origin HEAD:main && return; git pull -q --rebase --autostash origin main; done; return 1; }
 
-[[ "$(yq '.faultRate' "$VALUES")" == "0" ]] || { echo "dev faultRate is not 0" >&2; exit 1; }
+[[ "$(yq '.faultRate // "0"' "$VALUES")" == "0" ]] || { echo "dev faultRate is not 0" >&2; exit 1; }
 STABLE=$(ro '{.status.stableRS}')
 yq -i ".faultRate = \"$FAULT\"" "$VALUES"
 git commit -q -m "dev: DEMO bad release (FAULT_RATE=$FAULT)" -m "Recorded by scripts/demo_rollback.sh; reverted automatically." -- "$VALUES"
