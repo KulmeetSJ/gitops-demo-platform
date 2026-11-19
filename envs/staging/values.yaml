@@ -1,4 +1,4 @@
 # staging: changed only by the promote workflow (dev -> staging).
 image:
-  tag: "27be0f527edb0391af16608bbd4186ba465a81d1"
+  tag: "35fb8758caceb93d303efa52aeab47cccc2bb9b8"
 replicas: 1
