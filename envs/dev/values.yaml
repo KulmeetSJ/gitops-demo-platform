@@ -2,3 +2,4 @@
 image:
   tag: "27be0f527edb0391af16608bbd4186ba465a81d1"
 replicas: 1
+faultRate: "0.2"   # DEMO: canary must be aborted by analysis
